@@ -13,16 +13,16 @@ base_model_name = "Helsinki-NLP/opus-mt-ko-en"
 
 # Check whether the fine-tuned model actually exists
 if os.path.exists(finetuned_model_path):
-    print(f" Fine-tuned model found! Path: {finetuned_model_path}")
+    print(f"✅ Fine-tuned model found! Path: {finetuned_model_path}")
     target_model = finetuned_model_path
 else:
-    print(f" Fine-tuned model not found. (Path: {finetuned_model_path})")
-    print(f" Falling back to the base model: {base_model_name}")
+    print(f"⚠️Fine-tuned model not found. (Path: {finetuned_model_path})")
+    print(f"👉 Falling back to the base model: {base_model_name}")
     target_model = base_model_name
 
 # 2. Initialize translator
 
-print("Loading translation model...")
+print("⏳Loading translation model...")
 device = 0 if torch.cuda.is_available() else -1
 
 try:
@@ -33,7 +33,7 @@ try:
         device=device
     )
 except Exception as e:
-    print(f"\n Fatal error occurred: {e}")
+    print(f"\n ❌Fatal error occurred: {e}")
     sys.exit()
 
 
@@ -61,6 +61,7 @@ for text in sentences:
     print(f"🇺🇸 English Output : {translated_text}")
     print("-" * 50)
 
-print("\n Test Completed!")
+print("\n ✅Test Completed!")
+
 
 
