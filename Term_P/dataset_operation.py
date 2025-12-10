@@ -8,36 +8,36 @@ from transformers import (
     Seq2SeqTrainer
 )
 import os
-os.environ["WANDB_DISABLED"] = "true"  # wandb 끄기
+os.environ["WANDB_DISABLED"] = "true"  # Disable wandb
 
-# 1. 설정
+# Configuration
 MODEL_CHECKPOINT = "Helsinki-NLP/opus-mt-ko-en"
 DATASET_NAME = "lemon-mint/korean_english_parallel_wiki_augmented_v1"
 OUTPUT_DIR = "./ko-en-finetuned-model"
 
-# 2. 데이터셋 로드
+# Load Dataset
 print("Dataset Loading")
 raw_datasets = load_dataset(DATASET_NAME)
 
-# 검증 데이터셋 나누기
+# Split validation dataset
 if 'validation' not in raw_datasets:
     split = raw_datasets['train'].train_test_split(test_size=0.1, seed=42)
     raw_datasets = split
     raw_datasets['validation'] = raw_datasets.pop('test')
 
-# 3. 전처리 (이 부분이 핵심 수정 사항입니다!)
+# Preprocessing
 tokenizer = AutoTokenizer.from_pretrained(MODEL_CHECKPOINT)
 
 def preprocess_function(examples):
     inputs = []
     targets = []
 
-    # [수정 1] 데이터셋이 {'translation': {'ko': '...', 'en': '...'}} 구조일 경우 처리
+    # [Fix 1] Handle cases where the dataset structure is {'translation': {'ko': '...', 'en': '...'}}
     if "translation" in examples:
         inputs = [ex['ko'] for ex in examples["translation"]]
         targets = [ex['en'] for ex in examples["translation"]]
     else:
-        # 혹시 구조가 다를 경우를 대비한 안전 장치
+        
         inputs = examples.get('ko', examples.get('korean', []))
         targets = examples.get('en', examples.get('english', []))
 
@@ -50,18 +50,18 @@ def preprocess_function(examples):
 print("Data Preprocessing...")
 tokenized_datasets = raw_datasets.map(preprocess_function, batched=True)
 
-# 4. 모델 및 학습 설정
+# Model and Training Configuration
 model = AutoModelForSeq2SeqLM.from_pretrained(MODEL_CHECKPOINT)
 data_collator = DataCollatorForSeq2Seq(tokenizer, model=model)
 
 args = Seq2SeqTrainingArguments(
     output_dir=OUTPUT_DIR,
-    eval_strategy="epoch",  # [수정 2] evaluation_strategy -> eval_strategy 로 변경
+    eval_strategy="epoch",  # [Fix 2] Changed evaluation_strategy to eval_strategy
     save_strategy="epoch",
     learning_rate=2e-5,
     per_device_train_batch_size=16,
     per_device_eval_batch_size=16,
-    num_train_epochs=1,     # 빠른 테스트를 위해 1번만 학습
+    num_train_epochs=1,     # Train for only 1 epoch for quick testing
     predict_with_generate=True,
     fp16=True if torch.cuda.is_available() else False,
     push_to_hub=False,
@@ -76,13 +76,14 @@ trainer = Seq2SeqTrainer(
     tokenizer=tokenizer,
 )
 
-# 5. 학습 시작
+# Start Training
 print("Training Start!")
 trainer.train()
 
-# 6. 저장
+# Save Model
 save_path = os.path.join(OUTPUT_DIR, "final_model")
 trainer.save_model(save_path)
 tokenizer.save_pretrained(save_path)
 print(f"Model has been saved: {save_path}")
+
 
